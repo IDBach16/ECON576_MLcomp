@@ -302,3 +302,71 @@ defaultSummary(data=data.frame(obs=te5$y, pred=predict(m5, newdata=te5))
                , model=m5)
 #         RMSE     Rsquared          MAE 
 # 2.443833e+04 8.680925e-01 1.779878e+04
+
+##########
+#Quartile Analysis
+Upper = train %>% filter(SalePrice > 214000)
+Lower = train %>% filter(SalePrice < 129900)
+
+variables = colnames(Upper)
+
+for (var in variables) {
+  cat("\n--------------------------\n")
+  cat("Summary for variable:", var, "\n")
+  
+  cat("\nLower Quartile Summary:\n")
+  print(summary(Lower[[var]]))
+  
+  cat("\nUpper Quartile Summary:\n")
+  print(summary(Upper[[var]]))
+  
+  cat("--------------------------\n")
+}
+#basing decision off of if there is a significant difference between values or lower and upper quartiles
+VarsKeep = c("MSSubClass","LotFrontage","LotArea","Neighborhood","HouseStyle","OverallQual",
+             "YearBuilt","YearRemodAdd","Exterior1st","Exterior2nd","MasVnrType","MasVnrArea",
+             "ExterQual","Foundation","BsmtQual","BsmtFinType1","TotalBsmtSF","HeatingQC","X1stFlrSF",
+             "X2ndFlrSF","LowQualFinSF","GrLivArea","BsmtFullBath","FullBath","BedroomAbvGr","KitchenQual",
+             "TotRmsAbvGrd","Fireplaces","GarageType","GarageFinish","GarageCars","GarageArea","SaleType",
+             "SaleCondition","SalePrice")
+d6 = train %>% select(all_of(VarsKeep))
+testID = test[,1]
+test_6 = test[,(colnames(d6[,1:34]))]
+test_6 = cbind(testID,test_6)
+names(test_6)[1] = "Id"
+d6 = d6[,c(35,1:34)]
+names(d6)[1] = "y"
+
+
+dummiesD = dummyVars(y ~ ., data=d6)
+ex = data.frame(predict(dummiesD, newdata = d6))
+names(ex) = gsub("\\.","",names(ex))
+d6 = cbind(d6$y, ex)
+names(d6)[1] = "y"
+
+#for test set
+dummiesTe = dummyVars(Id ~ ., data=test_6)
+ex1 = data.frame(predict(dummiesTe, newdata = test_6))
+names(ex1) = gsub("\\.","",names(ex1))
+test_6 = cbind(test_6$Id, ex1)
+rm(dummiesD, ex, dummiesTe, ex1)
+names(test_6)[1] = "Id"
+
+set.seed(221133)
+inTrain6 = createDataPartition(y = d6$y, p = 0.8, list = F)
+tr6 = d6[inTrain6,]
+te6 = d6[-inTrain6,]
+
+m6 = train(y ~ ., data = tr6, method = "gbm", trControl = ctrl, metric = "RMSE", verbose = F)
+
+#m6 train
+defaultSummary(data=data.frame(obs=tr6$y, pred=predict(m6, newdata=tr6))
+               , model=m6)
+#         RMSE     Rsquared          MAE 
+# 2.294951e+04 9.113664e-01 1.424164e+04
+
+#m6 test
+defaultSummary(data=data.frame(obs=te6$y, pred=predict(m6, newdata=te6))
+               , model=m6)
+#         RMSE     Rsquared          MAE 
+# 2.322942e+04 8.808396e-01 1.712016e+04      
